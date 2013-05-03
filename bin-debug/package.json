@@ -1,0 +1,15 @@
+{
+  "name": "index",
+  "main": "index.html",
+  "window": {
+    "height": 610,
+    "width": 1024,
+    "toolbar": false
+  },
+  "webkit": {
+    "plugin": true
+  },
+  "node-webkit": {
+    "node-remote": "*"
+  }
+}

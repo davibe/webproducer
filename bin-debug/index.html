@@ -1,0 +1,105 @@
+<html>
+  <head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8">
+    <title>Producer</title>
+    <link rel="stylesheet" href="css/bootstrap.css" type="text/css" media="screen" title="no title" charset="utf-8">
+    <link rel="stylesheet" href="css/spacelab_original.css" type="text/css" media="screen" title="no title" charset="utf-8">
+    <link rel="stylesheet" href="css/spacelab.css" type="text/css" media="screen" title="no title" charset="utf-8">
+    <link rel="stylesheet" href="css/bootstrap-responsive.css" type="text/css" media="screen" title="no title" charset="utf-8">
+    <style rel="stylesheet" type="text/css" media="screen" title="no title" charset="utf-8">
+      input {
+        height: auto !important;
+      }
+    </style>
+
+
+  </head>
+  <body onload="">
+
+    <div class="navbar navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="brand" href="#">Producer</a>
+          <div class="navbar-content">
+            <ul class="nav pull-right">
+              <li class="open-inspector">
+              <a href="#">Inspector</a> 
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <br/>
+    </div>
+
+    <br/>
+    <br/>
+    <br/>
+
+    <div class="container">
+
+      <div class="row preview">
+        <div id="name" class="span12">
+          <h2 class="">Set it up, apply, see video on the right.</h2>
+          <h2 class=""><br/></h2>
+        </div>
+      </div>
+
+      <div class="row">
+
+        <div class="span6">
+          <form class="form-horizontal">
+            <div class="control-group advanced" _style="display: none;">
+              <label class="control-label" for="serverUrl">RTMP Server</label>
+              <div class="controls">
+                <input type="text" id="httpBaseUrl" name="serverUrl" value="rtmp://127.0.0.1:1935/live">
+              </div>
+            </div>
+
+            <div class="control-group advanced" _style="display: none;">
+              <label class="control-label" for="streamName">Stream Name</label>
+              <div class="controls">
+                <input type="text" id="streamName" name="streamName" value="foo">
+              </div>
+            </div>
+
+            <div class="control-group">
+              <label class="control-label" for="username">Username</label>
+              <div class="controls">
+                <input type="text" id="username" name="username" value="testuser">
+              </div>
+            </div>
+
+
+            <div class="control-group">
+              <label class="control-label" for="password">Password</label>
+              <div class="controls">
+                <input type="text" id="password" name="password" value="testpass">
+              </div>
+            </div>
+
+            <div class="control-group">
+              <div class="controls">
+                <button type="submit" class="btn btn-info apply-btn">Apply</button>
+              </div>
+            </div>
+
+          </form>
+        </div>
+
+        <div class="span6">
+          <div id="producer"></div>
+        </div>
+      </div>
+
+    </div>
+
+  </div> 
+</body>
+
+<script type="text/javascript" charset="utf-8" src="js/jquery-1.9.1.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/underscore.js"></script>
+<script type="text/javascript" charset="utf-8" src="js/backbone.js"></script>
+<script type="text/javascript" charset="utf-8" src="swfobject.js"></script>
+<script type="text/javascript" charset="utf-8" src="index.js"></script>
+</html>
