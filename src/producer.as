@@ -183,7 +183,7 @@ package
 				// flashVersion on the client we tell the server to do that for us.
 				// (this require a little coding on the server to receive this parameter
 				// and overwrite the client object flashversion attribute)
-				url += "?authmod=adobe&user=testuser"
+				url += "?authmod=adobe&user=" + this.username;
 			}
 			
 			if (this.salt !== '') {
@@ -234,11 +234,6 @@ package
 					this.oCamera.setQuality(this.streamQuality * 1000, this.streamQuality);
 					this.oCamera.setKeyFrameInterval(20);
 					
-					var h264Settings:H264VideoStreamSettings = new H264VideoStreamSettings();
-					h264Settings.setProfileLevel(H264Profile.BASELINE, H264Level.LEVEL_3_1);
-					
-					this.oNetStream.videoStreamSettings = h264Settings;
-					
 					trace("Container size " + this.width + "x" + this.height);
 					trace("Video size " + this.oVideo.width + "x" + this.oVideo.height);
 					trace("Camera size " + this.oCamera.width + "x" + this.oCamera.height);
@@ -255,9 +250,15 @@ package
 
 					this.oNetStream.attachCamera(this.oCamera);
 					this.oNetStream.attachAudio(this.oMicrophone);
+					
+					var h264Settings:H264VideoStreamSettings = new H264VideoStreamSettings();
+					h264Settings.setProfileLevel(H264Profile.BASELINE, H264Level.LEVEL_3_1);
+					
+					this.oNetStream.videoStreamSettings = h264Settings;
+					
 					// start publishing the stream..
 					this.oNetStream.addEventListener(NetStatusEvent.NET_STATUS, eNetStatus, false, 0, true);
-          			this.oNetStream.publish("mp4:" + this.sStreamName + ".mp4", "live");
+          			this.oNetStream.publish(this.sStreamName + "", "live");
 
 					// send metadata
 					var metaData:Object = new Object();
