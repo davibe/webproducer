@@ -16,6 +16,16 @@ package
 	import flash.text.TextField;
 	import flash.utils.ByteArray;
 	import flash.utils.setTimeout;
+	import flash.media.H264VideoStreamSettings;
+	import flash.media.H264Level;
+	import flash.media.H264Profile;
+	import flash.media.SoundCodec;
+	
+	// how to force proper codecs
+	// http://www.adobe.com/devnet/adobe-media-server/articles/encoding-live-video-h264.html
+	
+	// since we can't use proper audio codec but only speex and soreson we have to setup wowza like this
+	// http://www.wowza.com/forums/content.php?347-How-to-convert-Flash-Player-11-output-from-H-264-Speex-audio-to-H-264-AAC-audio-using-Wowza-Transcoder-AddOn
 	
 	public class producer extends Sprite
 	{
@@ -219,14 +229,23 @@ package
 			switch (oEvent1.info.code) {
 				case "NetConnection.Connect.Success":
 					this.oCamera = Camera.getCamera();
-					this.oCamera.setMode(this.streamWidth, this.streamHeight, this.streamFPS, false);
-					this.oCamera.setQuality(0, this.streamQuality);
+					this.oCamera.setMode(this.streamWidth, this.streamHeight, this.streamFPS, true);
+					// example if streamQualirt = 90 it's 900Kbps
+					this.oCamera.setQuality(this.streamQuality * 1000, this.streamQuality);
+					this.oCamera.setKeyFrameInterval(20);
+					
+					var h264Settings:H264VideoStreamSettings = new H264VideoStreamSettings();
+					h264Settings.setProfileLevel(H264Profile.BASELINE, H264Level.LEVEL_3_1);
+					
+					this.oNetStream.videoStreamSettings = h264Settings;
 					
 					trace("Container size " + this.width + "x" + this.height);
 					trace("Video size " + this.oVideo.width + "x" + this.oVideo.height);
 					trace("Camera size " + this.oCamera.width + "x" + this.oCamera.height);
 					
 					this.oMicrophone = Microphone.getMicrophone();
+					
+					this.oMicrophone.codec = SoundCodec.SPEEX;
 					// attach the camera to the video..
 					this.oVideo.attachCamera(this.oCamera);
 					// create a stream for the connection..
@@ -238,8 +257,22 @@ package
 					this.oNetStream.attachAudio(this.oMicrophone);
 					// start publishing the stream..
 					this.oNetStream.addEventListener(NetStatusEvent.NET_STATUS, eNetStatus, false, 0, true);
-          			this.oNetStream.publish(this.sStreamName);
+          			this.oNetStream.publish("mp4:" + this.sStreamName + ".mp4", "live");
 
+					// send metadata
+					var metaData:Object = new Object();
+					
+					metaData.codec = this.oNetStream.videoStreamSettings.codec;
+					metaData.profile = h264Settings.profile;
+					metaData.level = h264Settings.level;
+					metaData.fps = this.oCamera.fps;
+					metaData.bandwith = this.oCamera.bandwidth;
+					metaData.height = this.oCamera.height;
+					metaData.width = this.oCamera.width;
+					metaData.keyFrameInterval = this.oCamera.keyFrameInterval;
+					
+					this.oNetStream.send( "@setDataFrame", "onMetaData", metaData);
+					
 					// listen for meta data..
 					this.oMetaData.onMetaData = eMetaDataReceived;
 					this.oNetStream.client = this.oMetaData;

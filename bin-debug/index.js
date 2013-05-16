@@ -91,7 +91,13 @@ $(document).ready(function () {
   });
 
   try {
-    $(".toggle-advanced").bind("click", toggleAdvanced);
     $(".open-inspector").bind("click", openInspector);
   } catch (e) {}
 });
+
+if (this.process) {
+  var server = require('./server');
+  server.start(function (port) {
+    window.location.href = "http://127.0.0.1:" + port + "/index.html";
+  });
+}

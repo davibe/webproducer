@@ -11,5 +11,9 @@
   },
   "node-webkit": {
     "node-remote": "*"
+  },
+   "dependencies": {
+    "express": "3.x",
+    "portchecker": "*"
   }
 }
