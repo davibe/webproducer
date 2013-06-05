@@ -241,6 +241,11 @@ package
 					this.oMicrophone = Microphone.getMicrophone();
 					
 					this.oMicrophone.codec = SoundCodec.SPEEX;
+					this.oMicrophone.rate = 44;
+					this.oMicrophone.setSilenceLevel(0);
+					this.oMicrophone.encodeQuality = 5;
+					this.oMicrophone.framesPerPacket = 2;
+
 					// attach the camera to the video..
 					this.oVideo.attachCamera(this.oCamera);
 					// create a stream for the connection..
