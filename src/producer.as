@@ -99,6 +99,8 @@ package
 			stage.scaleMode=StageScaleMode.NO_SCALE;
 			stage.addEventListener(Event.RESIZE, updateSize);
 			stage.dispatchEvent(new Event(Event.RESIZE));
+			
+			this.startPreview();
 		}
 		
 		protected function updateSize(event:Event):void {
@@ -218,6 +220,29 @@ package
 			this.oConnection.close();
 		}
 		
+		public function startPreview():void {
+			this.oCamera = Camera.getCamera();
+			this.oCamera.setMode(this.streamWidth, this.streamHeight, this.streamFPS, true);
+			// example if streamQualirt = 90 it's 900Kbps
+			this.oCamera.setQuality(this.streamQuality * 1000, this.streamQuality);
+			this.oCamera.setKeyFrameInterval(20);
+			
+			trace("Container size " + this.width + "x" + this.height);
+			trace("Video size " + this.oVideo.width + "x" + this.oVideo.height);
+			trace("Camera size " + this.oCamera.width + "x" + this.oCamera.height);
+			
+			this.oMicrophone = Microphone.getMicrophone();
+			
+			this.oMicrophone.codec = SoundCodec.SPEEX;
+			this.oMicrophone.rate = 44;
+			this.oMicrophone.setSilenceLevel(0);
+			this.oMicrophone.encodeQuality = 5;
+			this.oMicrophone.framesPerPacket = 2;
+			
+			// attach the camera to the video..
+			this.oVideo.attachCamera(this.oCamera);
+		}
+		
 		
 		protected function eMetaDataReceived(oObject:Object):void {
             trace("MetaData: " + oObject.toString()); // debug trace..
@@ -228,27 +253,7 @@ package
 			
 			switch (oEvent1.info.code) {
 				case "NetConnection.Connect.Success":
-					this.oCamera = Camera.getCamera();
-					this.oCamera.setMode(this.streamWidth, this.streamHeight, this.streamFPS, true);
-					// example if streamQualirt = 90 it's 900Kbps
-					this.oCamera.setQuality(this.streamQuality * 1000, this.streamQuality);
-					this.oCamera.setKeyFrameInterval(20);
-					
-					trace("Container size " + this.width + "x" + this.height);
-					trace("Video size " + this.oVideo.width + "x" + this.oVideo.height);
-					trace("Camera size " + this.oCamera.width + "x" + this.oCamera.height);
-					
-					this.oMicrophone = Microphone.getMicrophone();
-					
-					this.oMicrophone.codec = SoundCodec.SPEEX;
-					this.oMicrophone.rate = 44;
-					this.oMicrophone.setSilenceLevel(0);
-					this.oMicrophone.encodeQuality = 5;
-					this.oMicrophone.framesPerPacket = 2;
-
-					// attach the camera to the video..
-					this.oVideo.attachCamera(this.oCamera);
-					// create a stream for the connection..
+					this.startPreview();
 					
 					this.oNetStream = new NetStream(oConnection);
 					// attach the camera and microphone to the stream..
