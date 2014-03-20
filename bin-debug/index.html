@@ -73,7 +73,7 @@ $(document).ready(function () {
       console.log("The user must approve camera access");
     } else {
       console.log("The camera is available, user already approved");
-      producer.fire('camera-unmuted'); // we manually trigger the event
+      setTimeout(function () { tryToConnect(); }, 1);
     }
     
     

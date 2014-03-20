@@ -410,6 +410,9 @@ package
 				case "NetConnection.Connect.Closed":
 					this.js_fire("disconnect", "NetConnection.Connect.Closed", ""); 
 					break;
+				case "NetStream.Publish.BadName":
+					this.js_fire("error", "NetStream.Publish.BadName", "Bad stream name, or already taken");
+					break;
 				default:
 					log(oEvent1.info.code);
 					this.js_fire("info", oEvent1.info.code.toString(), "");
