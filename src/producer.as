@@ -3,12 +3,18 @@ package
 	
 	import com.hurlant.crypto.hash.IHash;
 	
+	import flash.display.LoaderInfo;
 	import flash.display.Sprite;
 	import flash.events.Event;
 	import flash.events.NetStatusEvent;
+	import flash.events.StatusEvent;
 	import flash.external.ExternalInterface;
 	import flash.media.Camera;
+	import flash.media.H264Level;
+	import flash.media.H264Profile;
+	import flash.media.H264VideoStreamSettings;
 	import flash.media.Microphone;
+	import flash.media.SoundCodec;
 	import flash.media.Video;
 	import flash.net.NetConnection;
 	import flash.net.NetStream;
@@ -16,10 +22,6 @@ package
 	import flash.text.TextField;
 	import flash.utils.ByteArray;
 	import flash.utils.setTimeout;
-	import flash.media.H264VideoStreamSettings;
-	import flash.media.H264Level;
-	import flash.media.H264Profile;
-	import flash.media.SoundCodec;
 	
 	// how to force proper codecs
 	// http://www.adobe.com/devnet/adobe-media-server/articles/encoding-live-video-h264.html
@@ -27,8 +29,17 @@ package
 	// since we can't use proper audio codec but only speex and soreson we have to setup wowza like this
 	// http://www.wowza.com/forums/content.php?347-How-to-convert-Flash-Player-11-output-from-H-264-Speex-audio-to-H-264-AAC-audio-using-Wowza-Transcoder-AddOn
 	
+	// events
+	// ready -> the producer is ready
+	// camera-approved -> the user has approved camera acess
+	// connect -> rtmp connection established, data is flowing
+	// disconnect -> rtmp connction has been closed
+	// error -> first argument is the tipoc, second is a human readable description
+	// error "no-camera" -> Could not find an available camera
+	// error "net" -> 
 	public class producer extends Sprite
 	{
+		protected var id:String;
 		protected var sMediaServerURL:String = "rtmp://127.0.0.1:1935/live";
         protected var sStreamName:String = "foo";
 		protected var username:String = "testuser";
@@ -52,17 +63,37 @@ package
 		private var opaque:String = '';
 		private var salt:String = '';
 		
-		public function trace(string:String):void {
-			ExternalInterface.call("console.log", string);
+		public function log(string:String):void {
+			ExternalInterface.call("WebProducer.log", this.id, string);
 			this.statusTxt.text = string;
 		}
 		
+		public function js_fire(name:String, arg1:String, arg2:String):void {
+			if (!arg1) arg1 = ""; if (!arg2) arg2 = "";
+			ExternalInterface.call("WebProducer.js_event", this.id, name, arg1, arg2);
+		}
+		
+		public function reloadParams():void {
+			// load parameters coming from the html page, for the moment we just read the id
+			var parameters:Object = LoaderInfo(this.root.loaderInfo).parameters;
+			var id = parameters["id"];
+			if (!id) {
+				log("ERROR: you must provide an id");
+				return;
+			}
+			this.id = id;
+		}
+		
 		public function producer() {
+			this.id = "Unknown";
+			this.reloadParams();
+			
 			NetConnection.prototype.onBWDone = function(oObject1:Object):void {
-                trace("onBWDone: " + oObject1.toString()); // some media servers are dumb, so we need to catch a strange event..
+                log("onBWDone: " + oObject1.toString()); // some media servers are dumb, so we need to catch a strange event..
             }
 				
-			trace("Producer object has been created.");
+			log("Producer object has been created.");
+			
 			this.statusTxt.width = 640;
 			this.statusTxt.height = 480;
 			addChild(this.statusTxt);
@@ -74,7 +105,7 @@ package
 			this.oConnection.objectEncoding = ObjectEncoding.AMF0;
 			
 			if (ExternalInterface.available) {
-				ExternalInterface.addCallback("trace", this.trace);
+				ExternalInterface.addCallback("log", this.log);
 				ExternalInterface.addCallback("setCredentials", this.setCredentials);
 				ExternalInterface.addCallback("getCredentials", this.getCredentials);
 				ExternalInterface.addCallback("setUrl", this.setUrl);
@@ -89,8 +120,11 @@ package
 				ExternalInterface.addCallback("setStreamFPS", this.setStreamFPS);
 				ExternalInterface.addCallback("connect", this.connect);
 				ExternalInterface.addCallback("disconnect", this.disconnect);
+				ExternalInterface.addCallback("countCameras", this.countCameras);
+				ExternalInterface.addCallback("isCameraMuted", this.isCameraMuted);
+
 			} else {
-				trace("External interface not available)");
+				log("External interface not available)");
 			}
 			
 			// fix flash content resizing
@@ -100,7 +134,10 @@ package
 			stage.addEventListener(Event.RESIZE, updateSize);
 			stage.dispatchEvent(new Event(Event.RESIZE));
 			
+			this.cameraAttach();
 			this.startPreview();
+			this.js_fire("ready", this.id, "");
+
 		}
 		
 		protected function updateSize(event:Event):void {
@@ -108,9 +145,34 @@ package
 			this.oVideo.height = stage.stageHeight;
 			this.statusTxt.width = stage.stageWidth;
 			this.statusTxt.height = stage.stageHeight;
-		}		
+		}
+		
+		protected function cameraAttach():void {
+			this.oCamera = Camera.getCamera(); // get the default one for now
+			if (!this.oCamera) {
+				this.js_fire("error", "no-camera", "No camera available");
+				return;
+			}
+			this.oCamera.addEventListener(StatusEvent.STATUS, cameraStatus);
+		}
+		
+		protected function cameraStatus(event:StatusEvent):void {
+			switch (event.code) 
+			{ 
+				case "Camera.Muted": 
+					this.js_fire("camera-muted", "", "");
+					break; 
+				case "Camera.Unmuted": 
+					this.js_fire("camera-unmuted", "", "");
+					break;
+			}
+		}
 		
 		// External APIs
+		
+		public function isCameraMuted():Boolean {
+			return this.oCamera.muted;
+		}
 		
 		public function setCredentials(username:String, password:String):void {
 			this.username = username;
@@ -120,7 +182,6 @@ package
 		public function getCredentials():String {
 			return this.username + "/" + this.password;
 		}
-		
 		
 		public function setUrl(url:String):void {
 			this.sMediaServerURL = url;
@@ -207,29 +268,35 @@ package
 				
 				var response:String;
 				response = md5b64enc(salted + this.opaque + this.challenge);
-				trace(response);
+				log(response);
 				
 				url += "&challenge=" + this.challenge + "&response=" + response + "&opaque=" + this.opaque;
 			}
 			
-			trace("Connecting to url: " + url);
+			log("Connecting to url: " + url);
 			this.oConnection.connect(url, null, null, null, forcedVersion);
 		}
 		
 		public function disconnect():void {
+			this.log("Disconnecting");
 			this.oConnection.close();
 		}
 		
+		public function countCameras():int {
+			return Camera.names.length;
+		}
+		
 		public function startPreview():void {
-			this.oCamera = Camera.getCamera();
+			//this.log(Camera.names.toString());
+			
 			this.oCamera.setMode(this.streamWidth, this.streamHeight, this.streamFPS, true);
 			// example if streamQualirt = 90 it's 900Kbps
 			this.oCamera.setQuality(this.streamQuality * 1000, this.streamQuality);
 			this.oCamera.setKeyFrameInterval(20);
 			
-			trace("Container size " + this.width + "x" + this.height);
-			trace("Video size " + this.oVideo.width + "x" + this.oVideo.height);
-			trace("Camera size " + this.oCamera.width + "x" + this.oCamera.height);
+			log("Container size " + this.width + "x" + this.height);
+			log("Video size " + this.oVideo.width + "x" + this.oVideo.height);
+			log("Camera size " + this.oCamera.width + "x" + this.oCamera.height);
 			
 			this.oMicrophone = Microphone.getMicrophone();
 			
@@ -245,11 +312,11 @@ package
 		
 		
 		protected function eMetaDataReceived(oObject:Object):void {
-            trace("MetaData: " + oObject.toString()); // debug trace..
+            log("MetaData: " + oObject.toString()); // debug log..
 		}
 		
 		private function eNetStatus(oEvent1:NetStatusEvent):void {
-			trace("NetStatusEvent: " + oEvent1.info.code); // debug trace..
+			log("NetStatusEvent: " + oEvent1.info.code); // debug log..
 			
 			switch (oEvent1.info.code) {
 				case "NetConnection.Connect.Success":
@@ -287,15 +354,17 @@ package
 					// listen for meta data..
 					this.oMetaData.onMetaData = eMetaDataReceived;
 					this.oNetStream.client = this.oMetaData;
-					trace("Connected to the RTMP server."); // debug trace..
+					log("Connected to the RTMP server."); // debug log..
+					this.js_fire("connect", "", "");
 					break;
 				case "NetConnection.Connect.Closed":
-					trace("Disconnected from the RTMP server."); // debug trace..
+					log("Disconnected from the RTMP server."); // debug log..
+					this.js_fire("disconnect", "", "");
 					break;
 				case "NetConnection.Connect.Rejected":
 					var desc:String = oEvent1.info.description;
 					if (desc !== '') {
-						trace(desc);
+						log(desc);
 						try {
 							var parameters : Object = {};
 							var params : Array = desc.split('?')[1].split('&');
@@ -316,8 +385,9 @@ package
 								sessionId = parameters["sessionid"] || "";
 								opaque = parameters["opaque"] || "";
 								salt = parameters["salt"] || "";
-								trace("Server requested credentials, trying to reconnect in 1s");
+								log("Server requested credentials, trying to reconnect in 1s");
 								flash.utils.setTimeout(this.connect, 1000);
+								return
 							}
 							
 							if (parameters["reason"] == 'authfailed') {
@@ -326,15 +396,23 @@ package
 								flash.utils.setTimeout(this.connect, 1000);
 							}
 							
+							this.js_fire("error", "NetConnection.Connect.Rejected", "");
+							
 						} catch(e : Error) {
-							trace("ERROR: " + e.message);
+							log("ERROR: " + e.message);
+							this.js_fire("error", e.message);
 						}
 					}
 					break;
+				case "NetConnection.Connect.Failed":
+					this.js_fire("error", "NetConnection.Connect.Failed", "Unable to establish tcp connection"); 
+					break;
 				case "NetConnection.Connect.Closed":
+					this.js_fire("disconnect", "NetConnection.Connect.Closed", ""); 
 					break;
 				default:
-					trace(oEvent1.info.code);
+					log(oEvent1.info.code);
+					this.js_fire("info", oEvent1.info.code.toString(), "");
 					break;
 			}
 		}
