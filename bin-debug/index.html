@@ -102,6 +102,10 @@ $(document).ready(function () {
       producer.on('error', function (reason) {
         console.log("ERROR: ", reason);
       });
+
+      producer.on('save', function (url) {
+        console.log("The file has been saved to ", url);
+      });
       
       producer.connect();
       setTimeout(function () { producer.disconnect(); }, 10000);

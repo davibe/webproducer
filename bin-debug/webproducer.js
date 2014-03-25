@@ -11,7 +11,7 @@ var WebProducer = function (options) {
   this.methods = [
       'setCredentials', 'getCredentials',
       'setUrl', 'getUrl',
-      'setStreamName', 'sgetStreamName',
+      'setStreamName', 'getStreamName',
       'setStreamWidth', 'getStreamWidth',
       'setStreamHeight', 'getStreamHeight',
       'setStreamFPS', 'getStreamFPS',
@@ -70,6 +70,22 @@ WebProducer.prototype = {
       self[method] = function () {
         return self.el[method].apply(self.el, arguments);
       };
+    });
+
+    this.on('disconnect', function () {
+      // since the server is currently set to stream-record the file to disk
+      // and close it as soon as the producer disconnect the file is actually
+      // ready right away.
+      var self = this;
+      var fileName = this.getStreamName() + '.mp4';
+      var port = '8082';
+      var host = this.getUrl().split('/')[2].split(':')[0];
+      var destinationUrl = [
+        'http://', host, ':', port, '/contents/', fileName
+      ].join('');
+      setTimeout(function () {
+        self.fire('save', destinationUrl);
+      }, 1000);
     });
   },
   
