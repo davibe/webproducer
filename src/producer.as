@@ -287,7 +287,8 @@ package
 		}
 		
 		public function startPreview():void {
-			//this.log(Camera.names.toString());
+			if (!this.oCamera) this.cameraAttach();
+			if (!this.oCamera) return;
 			
 			this.oCamera.setMode(this.streamWidth, this.streamHeight, this.streamFPS, true);
 			// example if streamQualirt = 90 it's 900Kbps
