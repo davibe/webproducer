@@ -1,7 +1,9 @@
 package
 {
 	
+	import com.hurlant.crypto.Crypto;
 	import com.hurlant.crypto.hash.IHash;
+	import com.hurlant.crypto.hash.MD5;
 	
 	import flash.display.LoaderInfo;
 	import flash.display.Sprite;
@@ -62,6 +64,8 @@ package
 		private var sessionId:String = '';
 		private var opaque:String = '';
 		private var salt:String = '';
+		private var signature:String = '';
+		private var secret:String = 'A-SAFE-SECRET';
 		
 		public function log(string:String):void {
 			ExternalInterface.call("WebProducer.log", this.id, string);
@@ -166,6 +170,27 @@ package
 					this.js_fire("camera-unmuted", "", "");
 					break;
 			}
+		}
+		
+		protected function updateSignature():void {
+			var host:String = String(ExternalInterface.call("window.location.hostname.toString"));
+			this.log('Detected host ' + host);
+			
+			import com.hurlant.crypto.Crypto;
+			import com.hurlant.util.Base64;
+			import com.hurlant.util.Hex;
+
+			var md5:IHash = Crypto.getHash("md5");
+			function md5b64enc(string:String):String {
+				var data:ByteArray = Hex.toArray(Hex.fromString(string));
+				data = md5.hash(data);
+				return Base64.encodeByteArray(data);
+			}
+			
+			// This is what this look like in python
+			// signature = base64.b64encode(md5.md5(data).digest())
+				
+			this.signature = md5b64enc(host + this.secret);
 		}
 		
 		// External APIs
@@ -273,6 +298,11 @@ package
 				url += "&challenge=" + this.challenge + "&response=" + response + "&opaque=" + this.opaque;
 			}
 			
+			this.updateSignature();
+			
+			if (this.signature) {
+				url += "&signature=" + this.signature;
+			}
 			log("Connecting to url: " + url);
 			this.oConnection.connect(url, null, null, null, forcedVersion);
 		}
