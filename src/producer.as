@@ -331,7 +331,7 @@ package
 					
 					var h264Settings:H264VideoStreamSettings = new H264VideoStreamSettings();
 					h264Settings.setProfileLevel(H264Profile.BASELINE, H264Level.LEVEL_3_1);
-					h264Settings.keyFrameInterval = 1;
+					h264Settings.setKeyFrameInterval(20);
 					
 					this.oNetStream.videoStreamSettings = h264Settings;
 					
