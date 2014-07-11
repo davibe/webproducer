@@ -83,10 +83,49 @@ WebProducer.prototype = {
       var destinationUrl = [
         'http://', host, ':', port, '/contents/', fileName
       ].join('');
+      // When the server has successfully transcoded the file a sentinel
+      // file will be created to signal that transcoding has been successfully
+      // completed.
+      var sentinelUrl = [
+        'http://', host, ':', port, '/contents/', fileName, '.done'
+      ].join('');
+      self.checkFileReady(sentinelUrl, function () {
+        console.log("Sentinel ready" , sentinelUrl);
+        self.fire('save', destinationUrl);
+      });
+      /*
       setTimeout(function () {
         self.fire('save', destinationUrl);
       }, 1000);
+      */
     });
+  },
+
+  checkFileReady: function (url, cb) {
+    // we poll the server to until the transcoded mp4 is ready, then cb
+    if (!window.jQuery) {
+      alert('please, include jQuery!');
+      setTimeout(cb, 1000);
+    }
+    var poll = function () {
+      jQuery.ajaxSetup({
+        crossDomain: true
+      });
+      if (window.XDomainRequest) {
+        // I am so sorry i'm doing this..
+        var xdr = new window.XDomainRequest();
+        xdr.open('get', url);
+        xdr.onload = function () { cb(); };
+        xdr.onerror = function () { setTimeout(poll, 1000); };
+        xdr.send();
+        return;
+      }
+      jQuery.get(url).done(cb).fail(function () {
+        console.log("Sentinel not found, try again", url);
+        setTimeout(poll, 1000);
+      });
+    };
+    poll();
   },
   
   // Minimal event emitter prototype
@@ -95,7 +134,6 @@ WebProducer.prototype = {
     this._events[event] = this._events[event] || [];
     this._events[event].push(fct);
   },
-  
   off: function(event, fct){
     this._events = this._events || {};
     if( event in this._events === false  )  return;
