@@ -49,6 +49,8 @@ $(document).ready(function () {
     height: 240 * 1.5, // not related to the stream resolution
     trace: false // would enable debug logs in js console
   });
+
+  window.producer = producer;
   
   producer.once('ready', function () {
     console.log('The producer is now ready');
