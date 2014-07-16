@@ -90,8 +90,7 @@ WebProducer.prototype = {
         'http://', host, ':', port, '/contents/', fileName, '.done'
       ].join('');
       self.checkFileReady(sentinelUrl, function () {
-        console.log("Sentinel ready" , sentinelUrl);
-        self.fire('save', destinationUrl);
+        self.fire('save', destinationUrl, this.getStreamName());
       });
       /*
       setTimeout(function () {
@@ -121,7 +120,6 @@ WebProducer.prototype = {
         return;
       }
       jQuery.get(url).done(cb).fail(function () {
-        console.log("Sentinel not found, try again", url);
         setTimeout(poll, 1000);
       });
     };
