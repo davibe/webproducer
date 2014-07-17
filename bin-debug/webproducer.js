@@ -8,6 +8,7 @@ var WebProducer = function (options) {
   this.trace = options.trace;
   WebProducer[this.id] = this; 
   this.createElement(this.id, this.width, this.height);
+  this.port = '8082';
   this.methods = [
       'setCredentials', 'getCredentials',
       'setUrl', 'getUrl',
@@ -60,6 +61,18 @@ WebProducer.prototype = {
       self.on_ready.apply(self, arguments);
     });
   },
+
+  get_http_base_url: function () {
+    var port = '8082';
+    var host = this.getUrl().split('/')[2].split(':')[0];
+    var ret = ['http://', host, ':', port, '/'].join('');
+    return ret;
+  },
+
+  get_http_api_base_url: function () {
+    var ret = [this.get_http_base_url(), 'api/'].join('');
+    return ret;
+  },
   
   on_ready: function () {
     this.el = document.getElementById(this.id);
@@ -72,58 +85,60 @@ WebProducer.prototype = {
       };
     });
 
-    this.on('disconnect', function () {
-      // since the server is currently set to stream-record the file to disk
-      // and close it as soon as the producer disconnect the file is actually
-      // ready right away.
-      var self = this;
-      var fileName = this.getStreamName() + '.mp4';
-      var port = '8082';
-      var host = this.getUrl().split('/')[2].split(':')[0];
-      var destinationUrl = [
-        'http://', host, ':', port, '/contents/', fileName
-      ].join('');
-      // When the server has successfully transcoded the file a sentinel
-      // file will be created to signal that transcoding has been successfully
-      // completed.
-      var sentinelUrl = [
-        'http://', host, ':', port, '/contents/', fileName, '.done'
-      ].join('');
-      self.checkFileReady(sentinelUrl, function () {
-        self.fire('save', destinationUrl, this.getStreamName());
-      });
-      /*
-      setTimeout(function () {
-        self.fire('save', destinationUrl);
-      }, 1000);
-      */
+    this.on('disconnect', function () { self.on_disconnect(); });
+  },
+
+  on_disconnect: function () {
+    var self = this;
+    var fileName = self.getStreamName() + '.mp4';
+    var port = '8082';
+    var host = self.getUrl().split('/')[2].split(':')[0];
+    var destinationUrl = [
+      self.get_http_base_url(), 'contents/', fileName
+    ].join('');
+    // When the server has successfully transcoded the file a sentinel
+    // file will be created to signal that transcoding has been successfully
+    // completed.
+    self._content_ready(function () {
+      self.fire('save', destinationUrl, self.getStreamName());
     });
   },
 
-  checkFileReady: function (url, cb) {
-    // we poll the server to until the transcoded mp4 is ready, then cb
+  _ensure_jQuery: function () {
     if (!window.jQuery) {
-      alert('please, include jQuery!');
-      setTimeout(cb, 1000);
+      // we use jquery for jsonp
+      alert('please, include jQuery first!');
     }
+  },
+
+  _content_ready: function (cb) {
+    // we poll the server to until the transcoded mp4 is ready, then cb
+    this._ensure_jQuery();
+    var url = [
+      this.get_http_api_base_url(), 'jsonp/contents/',
+      this.getStreamName(), '/ready'
+    ].join('');
+    
     var poll = function () {
-      jQuery.ajaxSetup({
-        crossDomain: true
-      });
-      if (window.XDomainRequest) {
-        // I am so sorry i'm doing this..
-        var xdr = new window.XDomainRequest();
-        xdr.open('get', url);
-        xdr.onload = function () { cb(); };
-        xdr.onerror = function () { setTimeout(poll, 1000); };
-        xdr.send();
-        return;
-      }
-      jQuery.get(url).done(cb).fail(function () {
+      jQuery.ajax({
+				url: url,
+				dataType: 'jsonp'
+      }).done(cb).fail(function () {
         setTimeout(poll, 1000);
       });
     };
     poll();
+  },
+
+  deleteContent: function (contentName, cb) {
+    // TODO: /jsonp/contents/<name>/delete
+    this._ensure_jQuery();
+    var url = [
+      this.get_http_api_base_url(), 'jsonp/contents/', contentName, '/delete'
+    ].join('');
+    jQuery.ajax({
+      url : url, dataType: 'jsonp'
+    }).then(cb);
   },
   
   // Minimal event emitter prototype
