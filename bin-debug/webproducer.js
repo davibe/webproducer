@@ -17,7 +17,9 @@ var WebProducer = function (options) {
       'setStreamHeight', 'getStreamHeight',
       'setStreamFPS', 'getStreamFPS',
       'connect', 'disconnect',
-      'countCameras', 'isCameraMuted'];
+      'countCameras', 'isCameraMuted',
+      'setMirroredPreview', 'getMirroredPreview',
+      'setAudioStreamActive', 'getAudioStreamActive'];
 };
 
 WebProducer.log = function (id) {

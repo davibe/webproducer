@@ -59,6 +59,8 @@ package
 		private var oCamera:Camera;
 		private var oMicrophone:Microphone;
 		private var statusTxt:TextField = new TextField();
+		private var mirroredPreview:Boolean = false;
+		private var audioStreamActive = true;
 		
 		private var challenge:String = '';
 		private var sessionId:String = '';
@@ -126,7 +128,11 @@ package
 				ExternalInterface.addCallback("disconnect", this.disconnect);
 				ExternalInterface.addCallback("countCameras", this.countCameras);
 				ExternalInterface.addCallback("isCameraMuted", this.isCameraMuted);
-
+				ExternalInterface.addCallback("setMirroredPreview", this.setMirroredPreview);
+				ExternalInterface.addCallback("getMirroredPreview", this.getMirroredPreview);
+				ExternalInterface.addCallback("setAudioStreamActive", this.setAudioStreamActive);
+				ExternalInterface.addCallback("getAudioStreamActive", this.getAudioStreamActive);
+				
 			} else {
 				log("External interface not available)");
 			}
@@ -261,6 +267,23 @@ package
 			return this.streamFPS;
 		}
 		
+		public function setMirroredPreview(mirrored:Boolean) {
+			this.mirroredPreview = mirrored;
+			this.applyMirroredPreviewIfNeeded();
+		}
+		
+		public function getMirroredPreview():Boolean {
+			return this.mirroredPreview;
+		}
+		
+		public function setAudioStreamActive(active:Boolean) {
+			this.audioStreamActive = active;
+		}
+		
+		public function getAudioStreamActive():Boolean {
+			return this.audioStreamActive;
+		}
+		
 		public function connect():void {
 			var url:String = this.sMediaServerURL;
 			var forcedVersion:String = null;
@@ -339,8 +362,25 @@ package
 			
 			// attach the camera to the video..
 			this.oVideo.attachCamera(this.oCamera);
+			this.applyMirroredPreviewIfNeeded();
 		}
 		
+		protected function applyMirroredPreviewIfNeeded():void {
+			if (this.oVideo == null) return;
+			
+			var isCurrentlyMirrored:Boolean = this.oVideo.scaleX < 0;
+			if (this.mirroredPreview) {
+				if (!isCurrentlyMirrored) {
+					this.oVideo.scaleX *= -1.0;
+					this.oVideo.x += this.oVideo.width;
+				}
+			} else {
+				if (isCurrentlyMirrored) {
+					this.oVideo.x -= this.oVideo.width;
+					this.oVideo.scaleX *= -1.0;
+				}
+			}
+		}
 		
 		protected function eMetaDataReceived(oObject:Object):void {
             log("MetaData: " + oObject.toString()); // debug log..
@@ -357,7 +397,9 @@ package
 					// attach the camera and microphone to the stream..
 
 					this.oNetStream.attachCamera(this.oCamera);
-					this.oNetStream.attachAudio(this.oMicrophone);
+					if (this.audioStreamActive) {
+						this.oNetStream.attachAudio(this.oMicrophone);
+					}
 					
 					var h264Settings:H264VideoStreamSettings = new H264VideoStreamSettings();
 					h264Settings.setProfileLevel(H264Profile.BASELINE, H264Level.LEVEL_3_1);

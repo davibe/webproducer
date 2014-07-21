@@ -64,6 +64,10 @@ $(document).ready(function () {
     // checking user permissions on camera
     producer.once('camera-unmuted', function () {
       console.log("Camera is now available");
+      producer.setMirroredPreview(true);
+      console.log('Is preview mirrored ? ', producer.getMirroredPreview());
+      producer.setAudioStreamActive(false);
+      console.log('Is audio streaming active ? ', producer.getAudioStreamActive());
       tryToConnect();
     });
     producer.on('camera-muted', function () {

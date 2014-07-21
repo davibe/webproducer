@@ -41,7 +41,6 @@ var Form = Backbone.View.extend({
     producer.setStreamWidth(640);
     producer.setStreamHeight(480);
     producer.connect();
-    
   },
 
   response: function (asd) {
