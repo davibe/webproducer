@@ -11,7 +11,7 @@ var WebProducer = function (options) {
   this.methods = [
       'setCredentials', 'getCredentials',
       'setUrl', 'getUrl',
-      'setStreamName', 'sgetStreamName',
+      'setStreamName', 'getStreamName',
       'setStreamWidth', 'getStreamWidth',
       'setStreamHeight', 'getStreamHeight',
       'setStreamFPS', 'getStreamFPS',
